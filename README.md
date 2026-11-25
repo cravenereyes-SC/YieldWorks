@@ -1,6 +1,6 @@
-# Star Citizen Mining and Salvage Tracker
+# YieldWorks - Operations Management
 
-Clean local web app skeleton to build an app to track mining and salvage operations including profit and loss.
+Manage your Star Citizen salvage and mining operations efficiently with YieldWorks. Track profit, loss, work orders, crew, and auto-fill data from in-game screenshots.
 
 ## Features
 

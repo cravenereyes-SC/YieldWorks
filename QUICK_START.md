@@ -1,4 +1,4 @@
-# Quick Start: Screenshot Auto-Fill Feature
+# Quick Start: YieldWorks Screenshot Auto-Fill
 
 ## 🎯 What It Does
 
@@ -16,7 +16,7 @@ Takes a screenshot of your in-game work order and **automatically fills all the 
 
 ## ⚡ 3-Minute Setup
 
-### 1️⃣ Launch the App
+### 1️⃣ Launch YieldWorks
 ```
 http://localhost:5500/salvage-session.html
 ```
