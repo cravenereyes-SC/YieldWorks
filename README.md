@@ -2,6 +2,24 @@
 
 Clean local web app skeleton to build an app to track mining and salvage operations including profit and loss.
 
+## Features
+
+### Work Order Management
+- Track mining and salvage operations in real-time
+- Monitor work order progress with live timers
+- Record expenses, crew assignments, and yields
+
+### 📸 Screenshot Auto-Fill (New!)
+Automatically extract work order data from in-game screenshots using OCR:
+- **Supported Data**: Location, refining process, duration, cost, current units, final yield
+- **Technology**: Client-side OCR with Tesseract.js
+- **Privacy**: All processing happens locally on your computer
+- **Accuracy**: 90%+ for clean screenshots
+
+**How to use**: Create a work order → Click "📷 Upload Screenshot" → Select your screenshot → Watch fields auto-populate!
+
+See [SCREENSHOT_AUTOFILL_GUIDE.md](./SCREENSHOT_AUTOFILL_GUIDE.md) for detailed instructions.
+
 ## Folder structure
 
 - index.html: Main app entry point
@@ -64,3 +82,9 @@ Double-click Click to open.cmd to:
 Optional: run from terminal with a custom port:
 
 powershell -ExecutionPolicy Bypass -File .\launch-app.ps1 -Port 5600
+
+## Documentation
+
+- **[SCREENSHOT_AUTOFILL_GUIDE.md](./SCREENSHOT_AUTOFILL_GUIDE.md)** - User guide for screenshot auto-fill feature
+- **[IMPLEMENTATION_SUMMARY.md](./IMPLEMENTATION_SUMMARY.md)** - Technical overview and architecture
+- **[CODE_EXAMPLES.md](./CODE_EXAMPLES.md)** - Code reference and integration examples

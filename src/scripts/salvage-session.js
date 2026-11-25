@@ -6,6 +6,8 @@ import {
   getSavedThemeId,
   getSavedVisualSettings
 } from "./modules/themes.js";
+import { extractWorkOrderFromScreenshot } from "./modules/screenshotOcr.js";
+import { getBasePriceForMaterial, isValidMaterial } from "./modules/materials.js";
 
 const historyBtnEl = document.querySelector("#session-history-btn");
 const beginSalvageBtnEl = document.querySelector("#begin-salvage-btn");
@@ -21,6 +23,7 @@ const completedEmptyMsgEl = document.querySelector("#completed-empty-msg");
 const summaryRunningCountEl = document.querySelector("#summary-running-count");
 const summaryCompletedCountEl = document.querySelector("#summary-completed-count");
 const summaryTotalCostEl = document.querySelector("#summary-total-cost");
+const durationDaysEl = document.querySelector("#work-order-days");
 const durationHoursEl = document.querySelector("#work-order-hours");
 const durationMinutesEl = document.querySelector("#work-order-minutes");
 const sessionSplashEl = document.querySelector("#session-splash");
@@ -48,6 +51,29 @@ const cancelCrewBtnEl = document.querySelector("#cancel-crew-btn");
 const crewListEl = document.querySelector("#crew-list");
 const crewTotalCountEl = document.querySelector("#crew-total-count");
 
+const addRevenueBtnEl = document.querySelector("#add-materials-btn");
+const revenueSplashEl = document.querySelector("#revenue-splash");
+const revenueFormEl = document.querySelector("#revenue-form");
+const cancelRevenueBtnEl = document.querySelector("#cancel-revenue-btn");
+const revenueMaterialSelectEl = document.querySelector("#revenue-material");
+const revenuePriceInputEl = document.querySelector("#revenue-price");
+const profitMaterialsDisplayEl = document.querySelector("#profit-materials-display");
+const profitExpensesDisplayEl = document.querySelector("#profit-expenses-display");
+const profitNetDisplayEl = document.querySelector("#profit-net-display");
+const profitMarginDisplayEl = document.querySelector("#profit-margin-display");
+
+const uploadScreenshotBtnEl = document.querySelector("#upload-screenshot-btn");
+const viewScreenshotBtnEl = document.querySelector("#view-screenshot-btn");
+const workOrderScreenshotInputEl = document.querySelector("#work-order-screenshot");
+const workOrderCurrentUnitsEl = document.querySelector("#work-order-current-units");
+const workOrderYieldEl = document.querySelector("#work-order-yield");
+const processingLocationSelectEl = document.querySelector("#processing-location");
+const workOrderTypeSelectEl = document.querySelector("#work-order-type");
+const workOrderCostEl = document.querySelector("#work-order-cost");
+const screenshotPreviewPanelEl = document.querySelector("#screenshot-preview-panel");
+const screenshotPreviewImageEl = document.querySelector("#screenshot-preview-image");
+const closeScreenshotBtnEl = document.querySelector("#close-screenshot-btn");
+
 let savedPilotCallsign = "CPT-AURORA";
 try {
   const savedProfile = JSON.parse(localStorage.getItem("sc-tracker-pilot-profile"));
@@ -74,6 +100,8 @@ let sessionExpenses = {
   repairCost: 0,
   refiningCost: 0
 };
+
+let sessionProfits = [];
 
 let elapsedSeconds = 0;
 let totalRefiningCost = 0;
@@ -157,11 +185,39 @@ function initWheelPicker(wheelEl, hiddenInputEl, min, max, initialValue, pad = f
   };
 }
 
+const daysWheelEl = document.querySelector("#days-wheel");
 const hoursWheelEl = document.querySelector("#hours-wheel");
 const minutesWheelEl = document.querySelector("#minutes-wheel");
+const durationDisplayLabel = document.querySelector("#duration-display-label");
 
-const hoursPicker = initWheelPicker(hoursWheelEl, durationHoursEl, 0, 24, 0, false);
+const daysPicker = initWheelPicker(daysWheelEl, durationDaysEl, 0, 30, 0, false);
+const hoursPicker = initWheelPicker(hoursWheelEl, durationHoursEl, 0, 23, 0, true);
 const minutesPicker = initWheelPicker(minutesWheelEl, durationMinutesEl, 0, 59, 45, true);
+
+function updateDurationDisplay() {
+  const days = Number(durationDaysEl.value) || 0;
+  const hours = Number(durationHoursEl.value) || 0;
+  const minutes = Number(durationMinutesEl.value) || 0;
+  
+  const durationLabel = [
+    days ? `${days}d` : "",
+    hours ? `${hours}h` : "",
+    minutes ? `${minutes}m` : ""
+  ].filter(Boolean).join(" ");
+  
+  const displayText = durationLabel || "0m";
+  if (durationDisplayLabel) {
+    durationDisplayLabel.textContent = displayText;
+  }
+}
+
+// Update display on initialization
+updateDurationDisplay();
+
+// Add event listeners to update display when values change
+daysWheelEl?.addEventListener('scroll', updateDurationDisplay);
+hoursWheelEl?.addEventListener('scroll', updateDurationDisplay);
+minutesWheelEl?.addEventListener('scroll', updateDurationDisplay);
 
 const resolvedTheme = getSavedThemeId("rsi");
 applyTheme(resolvedTheme);
@@ -185,10 +241,16 @@ function generateSessionId() {
 }
 
 function formatCountdown(totalSeconds) {
-  const hours = Math.floor(totalSeconds / 3600).toString().padStart(2, "0");
-  const minutes = Math.floor(totalSeconds / 60).toString().padStart(2, "0");
-  const seconds = (totalSeconds % 60).toString().padStart(2, "0");
-  return `${hours}:${(Number(minutes) % 60).toString().padStart(2, "0")}:${seconds}`;
+  const days = Math.floor(totalSeconds / 86400);
+  const hours = Math.floor((totalSeconds % 86400) / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  
+  const parts = [];
+  if (days > 0) parts.push(`${days}d`);
+  if (hours > 0) parts.push(`${hours}h`);
+  if (minutes > 0) parts.push(`${minutes}m`);
+  
+  return parts.length > 0 ? parts.join(" ") : "0m";
 }
 
 function updateWorkOrderListsState() {
@@ -290,6 +352,7 @@ function updateExpenseDisplay() {
   if (expenseTotalDisplayEl) {
     expenseTotalDisplayEl.textContent = `${total.toLocaleString("en-US")} aUEC`;
   }
+  updateProfitDisplay();
 }
 
 if (addExpenseBtnEl && expenseSplashEl) {
@@ -470,6 +533,41 @@ function renderCrewList() {
 
 renderCrewList();
 
+function renderProfitsList() {
+  updateProfitDisplay();
+}
+
+function updateProfitDisplay() {
+  let totalRevenue = 0;
+  let totalExpenses = 0;
+
+  sessionProfits.forEach((profit) => {
+    totalRevenue += profit.total;
+  });
+
+  totalExpenses = (sessionExpenses.contractCost || 0) + (sessionExpenses.fuelCost || 0) + (sessionExpenses.repairCost || 0) + (sessionExpenses.refiningCost || 0);
+
+  const netProfit = totalRevenue - totalExpenses;
+  const margin = totalRevenue > 0 ? ((netProfit / totalRevenue) * 100) : 0;
+
+  if (profitMaterialsDisplayEl) {
+    profitMaterialsDisplayEl.textContent = totalRevenue.toLocaleString("en-US") + " aUEC";
+  }
+
+  if (profitExpensesDisplayEl) {
+    profitExpensesDisplayEl.textContent = `-${totalExpenses.toLocaleString("en-US")} aUEC`;
+  }
+
+  if (profitNetDisplayEl) {
+    profitNetDisplayEl.textContent = netProfit.toLocaleString("en-US") + " aUEC";
+    profitNetDisplayEl.style.color = netProfit >= 0 ? "#00ff00" : "#ff0000";
+  }
+
+  if (profitMarginDisplayEl) {
+    profitMarginDisplayEl.textContent = `${margin.toFixed(1)}%`;
+  }
+}
+
 if (addCrewBtnEl && crewSplashEl) {
   addCrewBtnEl.addEventListener("click", () => {
     if (crewFormEl) {
@@ -528,7 +626,9 @@ if (workOrderSplashEl) {
 
 document.addEventListener("keydown", (event) => {
   if (event.key === "Escape") {
-    if (crewSplashEl && !crewSplashEl.hidden) {
+    if (revenueSplashEl && !revenueSplashEl.hidden) {
+      revenueSplashEl.hidden = true;
+    } else if (crewSplashEl && !crewSplashEl.hidden) {
       crewSplashEl.hidden = true;
     } else if (expenseSplashEl && !expenseSplashEl.hidden) {
       expenseSplashEl.hidden = true;
@@ -545,6 +645,7 @@ if (beginSalvageBtnEl) {
     if (workOrderSplashEl) {
       workOrderSplashEl.hidden = false;
       requestAnimationFrame(() => {
+       daysPicker?.setValue(Number(durationDaysEl.value) || 0, false);
         hoursPicker?.setValue(Number(durationHoursEl.value) || 0, false);
         minutesPicker?.setValue(Number(durationMinutesEl.value) || 45, false);
       });
@@ -558,14 +659,105 @@ if (cancelWorkOrderBtnEl && workOrderSplashEl) {
   });
 }
 
+if (uploadScreenshotBtnEl && workOrderScreenshotInputEl) {
+  uploadScreenshotBtnEl.addEventListener("click", () => {
+    workOrderScreenshotInputEl.click();
+  });
+
+  workOrderScreenshotInputEl.addEventListener("change", async (event) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    try {
+      uploadScreenshotBtnEl.disabled = true;
+      uploadScreenshotBtnEl.textContent = "📷 Processing...";
+
+      // Display the screenshot
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        screenshotPreviewImageEl.src = e.target.result;
+        screenshotPreviewPanelEl.style.display = "block";
+        viewScreenshotBtnEl.style.display = "block";
+      };
+      reader.readAsDataURL(file);
+
+      const workOrderData = await extractWorkOrderFromScreenshot(file);
+
+      if (workOrderData.location && processingLocationSelectEl) {
+        processingLocationSelectEl.value = workOrderData.location;
+      }
+
+      if (workOrderData.process && workOrderTypeSelectEl) {
+        workOrderTypeSelectEl.value = workOrderData.process;
+      }
+
+      if (workOrderData.days !== undefined && daysPicker) {
+        daysPicker.setValue(workOrderData.days, false);
+      }
+
+      if (workOrderData.hours !== undefined && hoursPicker) {
+        hoursPicker.setValue(workOrderData.hours, false);
+      }
+
+      if (workOrderData.minutes !== undefined && minutesPicker) {
+        minutesPicker.setValue(workOrderData.minutes, false);
+      }
+
+      if (workOrderData.cost && workOrderCostEl) {
+        workOrderCostEl.value = workOrderData.cost;
+      }
+
+      if (workOrderData.currentUnits && workOrderCurrentUnitsEl) {
+        workOrderCurrentUnitsEl.value = workOrderData.currentUnits;
+      }
+
+      if (workOrderData.yieldAmount && workOrderYieldEl) {
+        workOrderYieldEl.value = workOrderData.yieldAmount;
+      }
+
+      uploadScreenshotBtnEl.textContent = "📷 Screenshot Loaded ✓";
+      setTimeout(() => {
+        uploadScreenshotBtnEl.textContent = "📷 Upload Screenshot";
+        uploadScreenshotBtnEl.disabled = false;
+      }, 2000);
+    } catch (error) {
+      console.error("Failed to process screenshot:", error);
+      uploadScreenshotBtnEl.textContent = "📷 Error - Try Again";
+      uploadScreenshotBtnEl.disabled = false;
+      setTimeout(() => {
+        uploadScreenshotBtnEl.textContent = "📷 Upload Screenshot";
+      }, 3000);
+    }
+
+    workOrderScreenshotInputEl.value = "";
+  });
+
+  // View screenshot button
+  if (viewScreenshotBtnEl) {
+    viewScreenshotBtnEl.addEventListener("click", (e) => {
+      e.preventDefault();
+      screenshotPreviewPanelEl.style.display = screenshotPreviewPanelEl.style.display === "none" ? "block" : "none";
+    });
+  }
+
+  // Close screenshot button
+  if (closeScreenshotBtnEl) {
+    closeScreenshotBtnEl.addEventListener("click", (e) => {
+      e.preventDefault();
+      screenshotPreviewPanelEl.style.display = "none";
+    });
+  }
+}
+
 if (workOrderFormEl && workOrderSplashEl) {
   workOrderFormEl.addEventListener("submit", (event) => {
     event.preventDefault();
 
     const formData = new FormData(workOrderFormEl);
+    const durationDays = Number(formData.get("durationDays") || 0);
     const durationHours = Number(formData.get("durationHours") || 0);
     const durationMinutes = Number(formData.get("durationMinutes") || 0);
-    const durationSeconds = (durationHours * 60 * 60) + (durationMinutes * 60);
+    const durationSeconds = (durationDays * 86400) + (durationHours * 60 * 60) + (durationMinutes * 60);
 
     if (durationSeconds <= 0) {
       return;
@@ -573,6 +765,7 @@ if (workOrderFormEl && workOrderSplashEl) {
 
     const costNum = Number(formData.get("cost") || 0);
     const yieldAmountNum = Number(formData.get("yieldAmount") || 0);
+    const currentUnitsNum = Number(formData.get("currentUnits") || 0);
     totalRefiningCost += costNum;
     sessionExpenses.refiningCost = (sessionExpenses.refiningCost || 0) + costNum;
     updateExpenseDisplay();
@@ -580,11 +773,13 @@ if (workOrderFormEl && workOrderSplashEl) {
     const order = {
       location: String(formData.get("processingLocation") || ""),
       type: String(formData.get("type") || ""),
+      durationDays,
       durationHours,
       durationMinutes,
       durationSeconds,
       cost: costNum,
-      yieldAmount: yieldAmountNum
+      yieldAmount: yieldAmountNum,
+      currentUnits: currentUnitsNum
     };
     const orderEntry = document.createElement("div");
     const orderLocationHeader = document.createElement("strong");
@@ -600,9 +795,17 @@ if (workOrderFormEl && workOrderSplashEl) {
       order.durationHours ? `${order.durationHours}h` : "",
       order.durationMinutes ? `${order.durationMinutes}m` : ""
     ].filter(Boolean).join(" ");
-    const yieldLabel = order.yieldAmount > 0 ? ` | Yield: ${order.yieldAmount} cSCU` : "";
+    
+    let detailsText = `${durationLabel} | ${order.cost.toLocaleString("en-US")} aUEC`;
+    if (order.currentUnits > 0) {
+      detailsText += ` | Input: ${order.currentUnits} SCU`;
+    }
+    if (order.yieldAmount > 0) {
+      detailsText += ` | Yield: ${order.yieldAmount} SCU`;
+    }
+    
     orderDetails.className = "work-order-meta";
-    orderDetails.textContent = `${durationLabel} | ${order.cost.toLocaleString("en-US")} aUEC${yieldLabel}`;
+    orderDetails.textContent = detailsText;
     countdown.className = "work-order-countdown";
     orderEntry.append(orderLocationHeader, orderMethod, orderDetails, countdown);
 
@@ -613,9 +816,67 @@ if (workOrderFormEl && workOrderSplashEl) {
     startWorkOrderCountdown(order.durationSeconds, countdown, orderEntry);
 
     workOrderFormEl.reset();
+    daysPicker?.setValue(0, false);
     hoursPicker?.setValue(0, false);
     minutesPicker?.setValue(45, false);
     workOrderSplashEl.hidden = true;
+  });
+}
+
+if (addRevenueBtnEl && revenueSplashEl) {
+  addRevenueBtnEl.addEventListener("click", () => {
+    revenueSplashEl.hidden = false;
+  });
+}
+
+if (cancelRevenueBtnEl && revenueSplashEl) {
+  cancelRevenueBtnEl.addEventListener("click", () => {
+    revenueSplashEl.hidden = true;
+  });
+}
+
+if (revenueSplashEl) {
+  revenueSplashEl.addEventListener("click", (event) => {
+    if (event.target === revenueSplashEl) {
+      revenueSplashEl.hidden = true;
+    }
+  });
+}
+
+if (revenueMaterialSelectEl && revenuePriceInputEl) {
+  revenueMaterialSelectEl.addEventListener("change", (event) => {
+    const selectedMaterial = event.target.value;
+    if (selectedMaterial && isValidMaterial(selectedMaterial)) {
+      const basePrice = getBasePriceForMaterial(selectedMaterial);
+      if (basePrice > 0 && !revenuePriceInputEl.value) {
+        revenuePriceInputEl.value = basePrice;
+      }
+    }
+  });
+}
+
+if (revenueFormEl && revenueSplashEl) {
+  revenueFormEl.addEventListener("submit", (event) => {
+    event.preventDefault();
+    const formData = new FormData(revenueFormEl);
+    const material = String(formData.get("material") || "").trim();
+    const units = Number(formData.get("units") || 0);
+    const price = Number(formData.get("price") || 0);
+
+    if (!material || units <= 0 || price <= 0) return;
+
+    const totalRevenue = units * price;
+    sessionProfits.push({
+      id: `profit-${Date.now()}`,
+      material,
+      units,
+      price,
+      total: totalRevenue
+    });
+
+    renderProfitsList();
+    revenueFormEl.reset();
+    revenueSplashEl.hidden = true;
   });
 }
 

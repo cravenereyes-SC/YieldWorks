@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Time Format Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            background-color: #f0f0f0;
+        }
+        .test-case {
+            background-color: white;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 5px;
+            border-left: 4px solid #007bff;
+        }
+        .input {
+            font-weight: bold;
+            color: #333;
+        }
+        .output {
+            color: #28a745;
+            font-weight: bold;
+            margin-top: 5px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Time Format Test - Work Order Countdown</h1>
+    <p>Testing the new formatCountdown function that displays time in the same format as work order quotes</p>
+    
+    <div id="results"></div>
+
+    <script>
+        function formatCountdown(totalSeconds) {
+            const days = Math.floor(totalSeconds / 86400);
+            const hours = Math.floor((totalSeconds % 86400) / 3600);
+            const minutes = Math.floor((totalSeconds % 3600) / 60);
+            
+            const parts = [];
+            if (days > 0) parts.push(`${days}d`);
+            if (hours > 0) parts.push(`${hours}h`);
+            if (minutes > 0) parts.push(`${minutes}m`);
+            
+            return parts.length > 0 ? parts.join(" ") : "0m";
+        }
+
+        // Test cases
+        const testCases = [
+            { seconds: 460800, name: "5 days 8 hours (128h)" },
+            { seconds: 462000, name: "5 days 8 hours 20 minutes" },
+            { seconds: 86400, name: "1 day" },
+            { seconds: 72000, name: "20 hours" },
+            { seconds: 7200, name: "2 hours" },
+            { seconds: 600, name: "10 minutes" },
+            { seconds: 300, name: "5 minutes" },
+            { seconds: 60, name: "1 minute" },
+            { seconds: 30, name: "30 seconds" },
+            { seconds: 0, name: "0 seconds" },
+            { seconds: 462660, name: "5 days 8 hours 31 minutes" }
+        ];
+
+        const resultsDiv = document.getElementById('results');
+        
+        testCases.forEach(test => {
+            const output = formatCountdown(test.seconds);
+            const testDiv = document.createElement('div');
+            testDiv.className = 'test-case';
+            testDiv.innerHTML = `
+                <div class="input">Input: ${test.seconds} seconds (${test.name})</div>
+                <div class="output">Output: ${output}</div>
+            `;
+            resultsDiv.appendChild(testDiv);
+        });
+
+        // Special test for the work order scenario
+        const workOrderDiv = document.createElement('div');
+        workOrderDiv.className = 'test-case';
+        workOrderDiv.style.borderLeftColor = '#ff6b6b';
+        const workOrderSeconds = 128 * 3600; // 128 hours in seconds
+        const workOrderOutput = formatCountdown(workOrderSeconds);
+        workOrderDiv.innerHTML = `
+            <div style="font-size: 18px; color: #ff6b6b;">
+                <strong>Work Order Test Case:</strong><br/>
+                Duration: 128 hours (from previous test)<br/>
+                <div class="output" style="margin-top: 10px; font-size: 16px;">
+                    Time Remaining: ${workOrderOutput}
+                </div>
+            </div>
+        `;
+        resultsDiv.appendChild(workOrderDiv);
+    </script>
+</body>
+</html>
