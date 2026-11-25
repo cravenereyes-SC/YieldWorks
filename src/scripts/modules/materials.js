@@ -1,100 +1,42 @@
 /**
  * Star Citizen Salvage Materials Reference
  * Complete list of in-game materials obtained from salvaging derelict ships
+ * Based on UVerse Star Citizen Salvage Guide: https://uverse.space/salvage
  */
 
 export const SALVAGE_MATERIALS = {
-  metals: [
-    "Aluminum",
-    "Copper",
-    "Gold",
-    "Lead",
-    "Platinum",
-    "Silver",
-    "Steel",
-    "Stainless Steel",
-    "Titanium",
-    "Tungsten"
+  raw: [
+    "Recycled Material Composite",
+    "Scrap",
+    "Construction Material Pebbles",
+    "Construction Material Rubble",
+    "Construction Material Salvage",
+    "Construction Pieces"
   ],
-  alloys: [
-    "Beryllium Copper",
-    "Durasteel",
-    "Hardened Steel",
-    "Inconel",
-    "Invar",
-    "Monel",
-    "Nichrome",
-    "Stainless Steel Alloy"
-  ],
-  electronics: [
-    "Aluminum PCB",
-    "Copper Wire",
-    "Gold Connectors",
-    "Microchips",
-    "Platinum Contacts",
-    "Silicon",
-    "Solder",
-    "Tantalum Capacitors"
-  ],
-  composites: [
-    "Carbon Fiber",
-    "Ceramic Matrix",
-    "Fiberglass",
-    "Kevlar",
-    "Polymers",
-    "Silica Composite"
+  refined: [
+    "Construction Materials"
   ]
 };
 
 // Flatten all materials into a single array for easy access
 export const ALL_MATERIALS = [
-  ...SALVAGE_MATERIALS.metals,
-  ...SALVAGE_MATERIALS.alloys,
-  ...SALVAGE_MATERIALS.electronics,
-  ...SALVAGE_MATERIALS.composites
+  ...SALVAGE_MATERIALS.raw,
+  ...SALVAGE_MATERIALS.refined
 ];
 
 // Material price tiers (approximate baseline prices in aUEC per unit for salvage)
+// Based on UVerse current market rates
 export const MATERIAL_BASE_PRICES = {
-  // Metals (common salvage)
-  "Aluminum": 150,
-  "Copper": 120,
-  "Gold": 300,
-  "Lead": 100,
-  "Platinum": 400,
-  "Silver": 200,
-  "Steel": 80,
-  "Stainless Steel": 110,
-  "Titanium": 180,
-  "Tungsten": 220,
+  // Raw salvage materials
+  "Recycled Material Composite": 6952,
+  "Scrap": 3493,
+  "Construction Material Pebbles": 0,
+  "Construction Material Rubble": 0,
+  "Construction Material Salvage": 0,
+  "Construction Pieces": 0,
   
-  // Alloys (processed salvage)
-  "Beryllium Copper": 250,
-  "Durasteel": 320,
-  "Hardened Steel": 140,
-  "Inconel": 350,
-  "Invar": 160,
-  "Monel": 280,
-  "Nichrome": 200,
-  "Stainless Steel Alloy": 190,
-  
-  // Electronics (salvaged components)
-  "Aluminum PCB": 180,
-  "Copper Wire": 100,
-  "Gold Connectors": 350,
-  "Microchips": 500,
-  "Platinum Contacts": 450,
-  "Silicon": 120,
-  "Solder": 90,
-  "Tantalum Capacitors": 380,
-  
-  // Composites (specialized materials)
-  "Carbon Fiber": 220,
-  "Ceramic Matrix": 280,
-  "Fiberglass": 130,
-  "Kevlar": 310,
-  "Polymers": 110,
-  "Silica Composite": 150
+  // Refined materials
+  "Construction Materials": 11882
 };
 
 /**
@@ -103,10 +45,8 @@ export const MATERIAL_BASE_PRICES = {
  * @returns {string} - Category name or 'unknown'
  */
 export function getMaterialCategory(material) {
-  if (SALVAGE_MATERIALS.metals.includes(material)) return "metals";
-  if (SALVAGE_MATERIALS.alloys.includes(material)) return "alloys";
-  if (SALVAGE_MATERIALS.electronics.includes(material)) return "electronics";
-  if (SALVAGE_MATERIALS.composites.includes(material)) return "composites";
+  if (SALVAGE_MATERIALS.raw.includes(material)) return "raw";
+  if (SALVAGE_MATERIALS.refined.includes(material)) return "refined";
   return "unknown";
 }
 
