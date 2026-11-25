@@ -410,9 +410,33 @@
 }
 
 .salvage-session-header {
+  display: flex;
+  align-items: flex-start;
   justify-content: space-between;
   gap: 1rem;
   margin-bottom: 1.5rem;
+}
+
+.salvage-session-header > div:first-child {
+  flex: 1;
+}
+
+.header-crew-panel {
+  min-width: 200px;
+  padding: 0.8rem 1rem;
+  background: color-mix(in srgb, var(--bg-deep) 70%, transparent);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.crew-summary {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.crew-summary #crew-list {
+  min-height: 2.5rem;
 }
 
 .salvage-session-header h1,
@@ -486,6 +510,11 @@
   scrollbar-width: thin;
 }
 
+.header-crew-panel .crew-list {
+  max-height: none;
+  overflow-y: visible;
+}
+
 .crew-item {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto auto;
@@ -497,6 +526,13 @@
   border-radius: 6px;
 }
 
+.header-crew-panel .crew-item {
+  grid-template-columns: 1fr;
+  gap: 0.3rem;
+  padding: 0.4rem 0.5rem;
+  font-size: 0.8rem;
+}
+
 .crew-name {
   font-weight: 600;
   font-size: 0.85rem;
@@ -505,6 +541,12 @@
   overflow: hidden;
   text-overflow: ellipsis;
   min-width: 0;
+}
+
+.header-crew-panel .crew-name {
+  font-size: 0.8rem;
+  font-weight: 600;
+  margin-bottom: 0.15rem;
 }
 
 .crew-role-select {
@@ -548,6 +590,13 @@
   align-items: center;
   gap: 0.45rem;
   flex-shrink: 0;
+}
+
+.header-crew-panel .crew-meta {
+  justify-self: start;
+  gap: 0.3rem;
+  flex-wrap: wrap;
+  font-size: 0.75rem;
 }
 
 .crew-cut-input-wrap {
