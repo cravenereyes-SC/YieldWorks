@@ -825,12 +825,26 @@ if (workOrderFormEl && workOrderSplashEl) {
 
 if (addRevenueBtnEl && revenueSplashEl) {
   addRevenueBtnEl.addEventListener("click", () => {
+    revenueFormEl.reset();
+    if (revenueMaterialSelectEl) {
+      revenueMaterialSelectEl.value = "";
+    }
+    if (revenuePriceInputEl) {
+      revenuePriceInputEl.value = "";
+    }
     revenueSplashEl.hidden = false;
   });
 }
 
 if (cancelRevenueBtnEl && revenueSplashEl) {
   cancelRevenueBtnEl.addEventListener("click", () => {
+    revenueFormEl.reset();
+    if (revenueMaterialSelectEl) {
+      revenueMaterialSelectEl.value = "";
+    }
+    if (revenuePriceInputEl) {
+      revenuePriceInputEl.value = "";
+    }
     revenueSplashEl.hidden = true;
   });
 }
